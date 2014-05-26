@@ -232,6 +232,7 @@ class App
             'strictredirects' => true
             )
         );
+
         $this->_httpClient = $client;
         self::setStaticHttpClient($client);
         return $this;
@@ -575,9 +576,15 @@ class App
         if ($remainingRedirects === null) {
             $remainingRedirects = self::getMaxRedirects();
         }
+
         if ($headers === null) {
             $headers = array();
         }
+
+	$headers = array_merge(
+		$headers,
+		$this->_httpClient->getRequest()->getHeaders()->toArray()
+		);
 
         // Append a GData version header if protocol v2 or higher is in use.
         // (Protocol v1 does not use this header.)
@@ -605,10 +612,10 @@ class App
         if (self::getGzipEnabled()) {
             // some services require the word 'gzip' to be in the user-agent
             // header in addition to the accept-encoding header
-            if (strpos($this->_httpClient->getHeaders()->get('User-Agent'),
+            if (strpos($this->_httpClient->getRequest()->getHeaders()->get('User-Agent'),
                 'gzip') === false) {
                 $headers['User-Agent'] =
-                    $this->_httpClient->getHeaders()->get('User-Agent') . ' (gzip)';
+                    $this->_httpClient->getRequest()->getHeaders()->get('User-Agent') . ' (gzip)';
             }
             $headers['Accept-encoding'] = 'gzip, deflate';
         } else {
@@ -618,7 +625,9 @@ class App
         // Make sure the HTTP client object is 'clean' before making a request
         // In addition to standard headers to reset via resetParameters(),
         // also reset the Slug and If-Match headers
+
         $this->_httpClient->resetParameters();
+
         $this->_httpClient->setHeaders(array('Slug' => 'If-Match'));
 
         // Set the params for the new request to be performed
@@ -654,6 +663,7 @@ class App
         try {
             $this->_httpClient->setMethod($method);
             $response = $this->_httpClient->send();
+
             // reset adapter
             if ($usingMimeStream) {
                 $this->_httpClient->setAdapter($oldHttpAdapter);
